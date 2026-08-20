@@ -15,6 +15,7 @@
 
 ### Fixed
 - Keep forked subagent sessions out of top-level `pi -c` discovery by storing them under the parent session root. Thanks to [@xz-dev](https://github.com/xz-dev) for #1297.
+- Preserve `/council` advisor context defaults during fallback and cross-exam runs (#1298).
 
 ## [0.52.1] - 2026-08-20
 
