@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feat/external-cli-adapters-1426
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
