@@ -12,55 +12,19 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
+  workspace:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Inspect implementation seams
+      - name: Create source snapshot
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          targets = {
-              "src/shared/types.ts": [
-                  "AgentRunnerConfig", "ExternalCliRunnerStatus", "ExternalProcessStatus",
-                  "interface AsyncStatus", "interface AsyncStepStatus", "WorkflowReceipt",
-              ],
-              "src/agents/agents.ts": [
-                  "parseAgentRunnerFrontmatter", "validateExternalRunnerProfile",
-              ],
-              "src/runs/background/subagent-runner.ts": [
-                  'step.runner?.type === "external-cli"', "externalRunnerStatus(",
-              ],
-              "src/runs/shared/parallel-utils.ts": ["interface RunnerSubagentStep", "runner?:"],
-              "src/runs/shared/owned-process-tree.ts": ["export function", "export interface"],
-              "src/runs/shared/child-protocol.ts": ["export function", "export const"],
-              "src/workflows/workflow-receipt.ts": ["export function", "version"],
-              "src/api/preflight.ts": ["const externalRunner", "context === \"fork\""],
-              "test/unit/package-manifest.test.ts": ["agents", "gpt-pro"],
-              "test/unit/agent-frontmatter.test.ts": ["external-cli"],
-          }
-          for file_name, needles in targets.items():
-              p = Path(file_name)
-              if not p.exists():
-                  print(f"\n=== MISSING {file_name} ===")
-                  continue
-              lines = p.read_text().splitlines()
-              print(f"\n=== {file_name} ({len(lines)} lines) ===")
-              emitted = set()
-              for needle in needles:
-                  matches = [i for i, line in enumerate(lines) if needle in line]
-                  print(f"-- {needle!r}: {[i + 1 for i in matches[:20]]}")
-                  for i in matches[:6]:
-                      start, end = max(0, i - 18), min(len(lines), i + 42)
-                      key = (start, end)
-                      if key in emitted:
-                          continue
-                      emitted.add(key)
-                      print(f"--- lines {start + 1}-{end} ---")
-                      for j in range(start, end):
-                          print(f"{j + 1:5}: {lines[j]}")
-          PY
+          git archive --format=zip --output=pi-subagents-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pi-subagents-source
+          path: pi-subagents-source.zip
+          if-no-files-found: error
+          retention-days: 1
