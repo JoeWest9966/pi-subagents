@@ -276,6 +276,19 @@ function formatRef(result) {
   return "[" + parts.join("; ") + "]";
 }
 
+function formatChildResultString(result) {
+  const output = typeof result?.output === "string" ? result.output.trim() : "";
+  return output || formatRef(result);
+}
+
+function decorateWorkflowChildResult(result) {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return result;
+  Object.defineProperties(result, {
+    toString: { value() { return formatChildResultString(this); }, enumerable: false, configurable: true },
+  });
+  return result;
+}
+
 let runFingerprints = new Map();
 
 function validateRunCall(key, params, label, fingerprints) {
@@ -312,7 +325,8 @@ function validateRunCall(key, params, label, fingerprints) {
 const runs = Object.freeze({
   run(key, params) {
     validateRunCall(key, params, "runs.run", runFingerprints);
-    return hostCall("run", { key, params }, { key, operation: "run" });
+    const launched = runHostCall(key, params, false);
+    return trackRunObservation([{ key, operation: "run", callId: launched.callId }], launched.promise.then(decorateWorkflowChildResult));
   },
   all(items) {
     if (!Array.isArray(items)) throw new Error("runs.all(items) requires an array.");
@@ -329,7 +343,7 @@ const runs = Object.freeze({
     runFingerprints = fingerprints;
     const batch = { id: "batch-" + (++nextCallId), calls };
     const launched = calls.map(({ key, params }) => runHostCall(key, params, true, batch));
-    return trackRunObservation(launched.map(({ key, callId }) => ({ key, operation: "run", callId })), Promise.all(launched.map(({ promise }) => promise)).then((results) => wrapRunsAllResults(results, calls.map(({ key }) => key))));
+    return trackRunObservation(launched.map(({ key, callId }) => ({ key, operation: "run", callId })), Promise.all(launched.map(({ promise }) => promise)).then((results) => wrapRunsAllResults(results.map(decorateWorkflowChildResult), calls.map(({ key }) => key))));
   },
   steer(key, message, options = {}) {
     if (typeof key !== "string" || !runKeyPattern.test(key)) throw new Error("runs.steer has an invalid key.");

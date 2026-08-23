@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- Render workflow child results as useful text when scripts stringify `runs.all` or awaited `runs.run` result objects.
+
 ## [0.55.0] - 2026-08-23
 
 ### Highlights

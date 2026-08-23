@@ -1782,6 +1782,61 @@ describe("single sync execution", { skip: !available ? "pi packages not availabl
 		assert.equal(mockPi.callCount(), 0);
 	});
 
+	it("stringifies workflow child results without object placeholders", { skip: !createSubagentExecutor ? "executor not importable" : undefined }, async () => {
+		mockPi.onCall({ output: "first report", matchArgIncludes: "Review" });
+		mockPi.onCall({ output: "second report", matchArgIncludes: "Monitor" });
+		const executor = makeExecutor([makeAgent("echo")]);
+
+		const result = await executor.execute(
+			"scripted-workflow-stringified-child-results",
+			{
+				async: false,
+				workflowScript: `
+					const [review, monitor] = await runs.all([
+						{ key: "review", agent: "echo", task: "Review" },
+						{ key: "monitor", agent: "echo", task: "Monitor" }
+					]);
+					return "## Lane 1\\n" + review + "\\n\\n---\\n\\n## Lane 2\\n" + monitor;
+				`,
+			},
+			new AbortController().signal,
+			undefined,
+			makeMinimalCtx(tempDir),
+		);
+
+		const text = result.content[0]?.text ?? "";
+		assert.equal(result.isError, undefined, text || "workflow failed");
+		assert.doesNotMatch(text, /\[object Object\]/);
+		assert.match(text, /## Lane 1\nfirst report/);
+		assert.match(text, /## Lane 2\nsecond report/);
+		assert.equal(result.details.workflow?.value, "## Lane 1\nfirst report\n\n---\n\n## Lane 2\nsecond report");
+	});
+
+	it("stringifies awaited workflow child results without object placeholders", { skip: !createSubagentExecutor ? "executor not importable" : undefined }, async () => {
+		mockPi.onCall({ output: "single report", matchArgIncludes: "Review" });
+		const executor = makeExecutor([makeAgent("echo")]);
+
+		const result = await executor.execute(
+			"scripted-workflow-stringified-single-child-result",
+			{
+				async: false,
+				workflowScript: `
+					const review = await runs.run("review", { agent: "echo", task: "Review" });
+					return "## Lane\\n" + review;
+				`,
+			},
+			new AbortController().signal,
+			undefined,
+			makeMinimalCtx(tempDir),
+		);
+
+		const text = result.content[0]?.text ?? "";
+		assert.equal(result.isError, undefined, text || "workflow failed");
+		assert.doesNotMatch(text, /\[object Object\]/);
+		assert.match(text, /## Lane\nsingle report/);
+		assert.equal(result.details.workflow?.value, "## Lane\nsingle report");
+	});
+
 	it("derives workflow child output paths from the workflow output", { skip: !createSubagentExecutor ? "executor not importable" : undefined }, async () => {
 		mockPi.onCall({ output: "first report", matchArgIncludes: "Review" });
 		mockPi.onCall({ output: "second report", matchArgIncludes: "Monitor" });
