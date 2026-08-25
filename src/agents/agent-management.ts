@@ -787,13 +787,14 @@ function handleModels(params: ManagementParams, ctx: ManagementContext): AgentTo
 
 	const discovered = discoverAgentsAll(ctx.cwd);
 	const builtinByName = new Map(discovered.builtin.map((agent) => [agent.name, agent]));
+	const resolveBuiltinModelAgent = (name: string): AgentConfig | undefined => builtinByName.get(name) ?? resolveAgentName(name, discovered.builtin).agent;
 	const availableModels = ctx.modelRegistry.getAvailable().map(toModelInfo);
 	const currentModel = ctx.model ? { provider: ctx.model.provider, id: ctx.model.id } : undefined;
 	const preferredProvider = ctx.model?.provider;
 	const names = requestedAgent ? [requestedAgent] : [...BUILTIN_AGENT_NAMES];
 
 	if (requestedAgent) {
-		const agent = builtinByName.get(requestedAgent);
+		const agent = resolveBuiltinModelAgent(requestedAgent);
 		if (!agent) return result(`Builtin agent '${requestedAgent}' not found.`, true);
 		const resolvedModel = resolveSubagentModelOverride(agent.model, currentModel, availableModels, preferredProvider);
 		const lines = [
@@ -827,7 +828,7 @@ function handleModels(params: ManagementParams, ctx: ManagementContext): AgentTo
 	];
 
 	for (const name of names) {
-		const agent = builtinByName.get(name);
+		const agent = resolveBuiltinModelAgent(name);
 		if (!agent) {
 			lines.push(name);
 			lines.push("  model:");

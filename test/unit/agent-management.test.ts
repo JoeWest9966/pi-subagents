@@ -1007,9 +1007,24 @@ Drive the failing test first.
 		assert.match(text, /^Builtin subagent models/m);
 		assert.match(text, /Current session model:\n  openai\/gpt-5-mini/);
 		assert.match(text, /(?:^|\n)scout\n  model:\n    openai\/gpt-5-mini\n  source: inherits current session model(?:\n|$)/);
+		assert.match(text, /(?:^|\n)advisor\n  model:\n    openai\/gpt-5-mini\n  source: inherits current session model(?:\n|$)/);
+		assert.doesNotMatch(text, /advisor\n  model:\n    \(builtin definition not found\)/);
 		assert.match(text, /Available models in this session's registry/);
 		assert.match(text, /  anthropic\/claude-sonnet-4\n  openai\/gpt-5-mini/);
 		assert.match(text, /Use an exact provider\/id from this list when you pass model/);
+	});
+
+	it("resolves the advisor builtin alias in a filtered model mapping", () => {
+		const result = handleManagementAction("models", { agent: "advisor" }, {
+			cwd: tempDir,
+			modelRegistry: { getAvailable: () => [{ provider: "openai", id: "gpt-5-mini" }] },
+			model: { provider: "openai", id: "gpt-5-mini" },
+		});
+		const text = readText(result);
+		assert.equal(result.isError, false);
+		assert.match(text, /Agent: advisor/);
+		assert.match(text, /Effective model:\n  openai\/gpt-5-mini/);
+		assert.doesNotMatch(text, /Builtin agent 'advisor' not found|source: missing/);
 	});
 
 	it("reports override source and disabled builtin state in runtime model mappings", () => {
