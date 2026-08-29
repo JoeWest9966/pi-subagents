@@ -624,7 +624,12 @@ function validateHostCommand(key, params) {
   if (!params || typeof params !== "object" || Array.isArray(params)) throw new Error("runs.host('" + key + "') params must be an object.");
   const allowed = new Set(["kind", "command", "timeoutMs", "output", "role", "provider"]);
   const unknown = Object.keys(params).filter((field) => !allowed.has(field));
-  if (unknown.length) throw new Error("runs.host('" + key + "') params have unsupported fields: " + unknown.join(", ") + ".");
+  if (unknown.length) {
+    const cwdHint = unknown.includes("cwd")
+      ? " The host step does not accept per-step cwd; commands and relative output paths use the workflow cwd. Set cwd on the outer subagent request, or put a trusted directory change in command (for example, 'cd /path/to/worktree && npm test')."
+      : "";
+    throw new Error("runs.host('" + key + "') params have unsupported fields: " + unknown.join(", ") + "." + cwdHint);
+  }
   if (params.kind !== "command") throw new Error("runs.host('" + key + "') kind must be 'command'.");
   if (typeof params.command !== "string" || !params.command.trim() || params.command.includes("\u0000") || new TextEncoder().encode(params.command.trim()).byteLength > 16384) throw new Error("runs.host('" + key + "') command must be a non-empty string of at most 16384 bytes without NUL.");
   if (!Number.isInteger(params.timeoutMs) || params.timeoutMs < 1 || params.timeoutMs > 86400000) throw new Error("runs.host('" + key + "') timeoutMs must be an integer from 1 to 86400000.");
@@ -1227,7 +1232,7 @@ function validateStaticHostCall(call: AstNode): WorkflowScriptValidationError[] 
 	for (const property of params.properties) {
 		if (!astNode(property)) continue;
 		const name = staticPropertyKey(property);
-		if (name !== undefined && !allowed.has(name)) errors.push({ message: `runs.host params contain unsupported field '${name}'.`, ...nodeLocation(property) });
+		if (name !== undefined && !allowed.has(name)) errors.push({ message: name === "cwd" ? "runs.host params contain unsupported field 'cwd'. The host step does not accept per-step cwd; commands and relative output paths use the workflow cwd. Set cwd on the outer subagent request, or put a trusted directory change in command (for example, 'cd /path/to/worktree && npm test')." : `runs.host params contain unsupported field '${name}'.`, ...nodeLocation(property) });
 	}
 	const kindNode = directObjectPropertyValue(params, "kind");
 	const commandNode = directObjectPropertyValue(params, "command");

@@ -915,6 +915,24 @@ describe("single sync execution", { skip: !available ? "pi packages not availabl
 		assert.deepEqual(failed.details.workflow?.receipt?.hostSteps?.map(({ state, reasonCode, exitCode }) => ({ state, reasonCode, exitCode })), [{ state: "error", reasonCode: "command_failed", exitCode: 4 }]);
 	});
 
+	it("explains the cwd workaround instead of launching a host step", { skip: !createSubagentExecutor ? "executor not importable" : undefined }, async () => {
+		const executor = makeExecutor([makeAgent("echo")]);
+		const result = await executor.executePublic(
+			"host-command-cwd",
+			{
+				async: false,
+				workflowScript: `return await runs.host("tests", { kind: "command", command: "npm test", timeoutMs: 5000, cwd: "/tmp" });`,
+			},
+			new AbortController().signal,
+			undefined,
+			makeMinimalCtx(tempDir),
+		);
+
+		assert.equal(result.isError, true);
+		assert.match(result.content[0]?.text ?? "", /does not accept per-step cwd.*workflow cwd.*outer subagent request.*cd \/path\/to\/worktree/);
+		assert.equal(mockPi.callCount(), 0);
+	});
+
 	it("rejects a child output claimed by an earlier host command", { skip: !createSubagentExecutor ? "executor not importable" : undefined }, async () => {
 		const scriptPath = path.join(tempDir, "host-output-owner.cjs");
 		fs.writeFileSync(scriptPath, `process.stdout.write("host owns output\\n");`);

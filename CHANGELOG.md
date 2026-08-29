@@ -6,6 +6,7 @@
 ### Changed
 - Clarify portable subagent orchestration guidance: keep the parent on the ordinary strong default model, route bounded workers/scouts to a fast worker tier, and reserve a top-reasoning model for bounded read-only critique or escalation without requiring a specific provider.
 - Trim duplicated orchestration recipes from the packaged skill while keeping policy in `constraints-and-recipes.md` and execution details in `execution-controls.md`.
+- Clarify workflowScript portability and runs.host working-directory limits, including the outer workflow cwd and trusted `cd ... && command` patterns (#1679).
 
 ### Fixed
 - Reuse a fork-family prompt cache key for OpenAI-style forked subagent requests so sibling fork children keep cache affinity without pooling fresh children. Thanks to [@Shinkicast](https://github.com/Shinkicast) for #1682.

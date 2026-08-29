@@ -178,7 +178,7 @@ subagent({ workflowScript: `
 ` });
 ```
 
-The first version supports only `kind: "command"`. `command` and `timeoutMs` are required; `output` must be a relative path without traversal. `role` may be `ci` or `gate`, and `provider` is display metadata only. The command has no stdin, receives the workflow cwd, and must be awaited or returned. Stdout, stderr, and the saved log are bounded. A nonzero exit, timeout, abort, or output-write failure fails the workflow. Async status and terminal receipts store the bounded host-step state; renderers do not run commands or read command output.
+The first version supports only `kind: "command"`. `command` and `timeoutMs` are required; `output` must be a relative path without traversal. `role` may be `ci` or `gate`, and `provider` is display metadata only. **There is no per-step `cwd` field:** the command and relative output path use the workflow cwd. Set `cwd` on the outer `subagent({...})` request when the workflow should run in another directory, or put a trusted directory change in the command (for example, `cd /path/to/worktree && npm test`) when only that step differs. The command has no stdin, receives the workflow cwd, and must be awaited or returned. Stdout, stderr, and the saved log are bounded. A nonzero exit, timeout, abort, or output-write failure fails the workflow. Async status and terminal receipts store the bounded host-step state; renderers do not run commands or read command output.
 
 ### Steering a workflow child
 
