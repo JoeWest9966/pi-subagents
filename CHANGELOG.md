@@ -9,6 +9,9 @@
 - Clarify that `oracle` and top-reasoning models are escalation tools, not routine fresh-review defaults.
 - Route untargeted RPC status through restored in-memory projections when safe while preserving executor-backed targeted status and transcript options (#1735).
 
+### Fixed
+- Preserve durable file-only child reports and continue read-only workflow review after malformed acceptance metadata (#1724).
+
 ## [0.60.0] - 2026-08-30
 
 ### Highlights
