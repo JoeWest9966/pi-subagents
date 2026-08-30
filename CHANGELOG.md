@@ -3,22 +3,33 @@
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-08-30
+
+### Highlights
+- Agent selection is easier with compact capability lists and structured capability details.
+- Async status views are calmer and show workflow progress with clearer grouping and labels.
+- Subagent guidance is clearer about when to work directly and when to orchestrate delegated planning, implementation, and review.
+- Windows and macOS runs avoid more distracting console flashes, delayed failures, and startup hangs.
+- Recovery paths preserve better diagnostics when child runs time out, fail early, or cannot provide requested output.
+
+### Added
+- Add `action: "list", capabilities: true` for compact prompt-free agent capability discovery. Thanks to [@peedrr](https://github.com/peedrr) for #1717.
+- Add structured `details.agentCapabilities` records so callers can select agents without parsing prose rows (#1720).
+
 ### Changed
 - Show `runs.lanes(...)` workflows with active-stage focus and planned-stage progress in async status widgets (#1699).
 - Align foreground subagent result labels with async widget labels and disambiguate duplicate rows (#1697).
 - Render parallel subagent workflow groups as readable cards with nested agent rows (#1696).
 - Remove repeated one-child async widget status labels and compact progress echoes (#1695).
-- Tighten packaged subagent and council-mode skill guidance around direct one-child launches, composed `workflowScript` runs, generic review validation, pass contracts, and private policy boundaries.
-- Clarify portable subagent orchestration guidance: keep the parent on the ordinary strong default model, route bounded workers/scouts to a fast worker tier, and reserve a top-reasoning model for bounded read-only critique or escalation without requiring a specific provider.
-- Trim duplicated orchestration recipes from the packaged skill while keeping policy in `constraints-and-recipes.md` and execution details in `execution-controls.md`.
-- Clarify direct versus orchestrator mode in packaged subagent guidance, including parent authority and a lightweight writer/challenge/review loop (#1722).
-- Clarify workflowScript portability and runs.host working-directory limits, including the outer workflow cwd and trusted `cd ... && command` patterns (#1679).
-- Add compact prompt-free agent capability discovery with `action: "list", capabilities: true`. Thanks to [@peedrr](https://github.com/peedrr) for #1717.
-- Add structured `details.agentCapabilities` records for capability discovery so callers can select agents without parsing prose rows (#1720).
+- Tighten packaged subagent and Council Mode guidance for one-child launches, composed `workflowScript` runs, generic review validation, and private policy boundaries.
+- Clarify portable model-tier guidance for parent, worker, scout, reviewer, and critique subagents without requiring a specific provider.
+- Trim duplicated orchestration recipes from the packaged skill while keeping detailed policy and execution references in one place.
+- Clarify when the parent should work directly versus orchestrate delegated subagent work, including who owns decisions and publication (#1722).
+- Clarify `workflowScript` portability and `runs.host(...)` working-directory limits, including outer workflow `cwd` and trusted `cd ... && command` patterns (#1679).
 
 ### Fixed
 - Treat malformed persisted async status states as partial, bound persisted workflow stage text, and fail closed when an explicit child-output path cannot be inspected before a run.
-- Surface recovery-needed diagnostics for dirty timed-out children that miss requested reports, while keeping them fail-closed (#1713).
+- Surface recovery diagnostics for dirty timed-out children that miss requested reports, while keeping them fail-closed (#1713).
 - Keep retained-session resume runners from flashing console windows on Windows while preserving Unix background detachment. Thanks to [@Zethu5](https://github.com/Zethu5) for #1711.
 - Hide mutation-evidence Git subprocess windows on Windows to prevent visible console flashes or terminal tabs. Thanks to [@dnnkeeper](https://github.com/dnnkeeper) for #1706.
 - Deliver immediate async workflow terminal failures on macOS without requiring a later status refresh (#1700).
