@@ -3,6 +3,12 @@
 
 ## [Unreleased]
 
+### Highlights
+- Subagent launches are more token-efficient by default, with shorter parent-facing prompt guidance and less repeated async status text.
+- Status, Fleet, RPC, widget, and background-work refresh paths do less redundant discovery, projection, normalization, and provider scanning.
+- Async workflow recovery is safer around corrupt active status, malformed acceptance metadata, model fallback origins, and durable child reports.
+- Workflow permissions and model visibility are clearer through named workflow resources, `bg_wait`, and effective model mappings for discovered agents.
+
 ### Changed
 - Show effective model mappings for discovered and runtime-registered subagents through management and `/subagents-models`. Thanks [@RapierCraft](https://github.com/RapierCraft) for #1732.
 - Trim default subagent prompt guidelines to five parent-facing entries while keeping advanced workflow details in the packaged guide. Thanks [@Ran-Xing](https://github.com/Ran-Xing) for #1746.
