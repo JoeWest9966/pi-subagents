@@ -3,19 +3,28 @@
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-08-31
+
+### Highlights
+- Child agents can report completion evidence more cleanly and stay away from tools they should not use.
+- Session-only schedules keep personal scheduled work tied to the session that created it.
+- Async forked runs now start and resume in the working directory you requested.
+- Windows child launches are more reliable, with clearer errors when Pi cannot find a valid CLI.
+- External CLI and read-only recovery paths are sturdier when workers disappear or prompts include unusual line separators.
+
 ### Added
-- Let native children with `outputSchema` require acceptance evidence in the same `structured_output` call via `acceptance.report: "on"`, while `"off"` keeps fenced acceptance reports. Thanks [@mapleluvr](https://github.com/mapleluvr) for #1770.
+- Let native children with `outputSchema` include required acceptance evidence in the same `structured_output` call with `acceptance.report: "on"`; `acceptance.report: "off"` keeps fenced acceptance reports. Thanks [@mapleluvr](https://github.com/mapleluvr) for #1770.
 - Add per-agent `excludeTools` deny-lists that compose with Pi's ambient or explicit child tool selection. Thanks [@expoli](https://github.com/expoli) for #1776.
-- Add session-only durable schedules that execute only in their creating session. Thanks [@yangfeng20](https://github.com/yangfeng20) for #1777.
+- Add session-only durable schedules that only run in the session that created them. Thanks [@yangfeng20](https://github.com/yangfeng20) for #1777.
 
 ### Fixed
-- Align async forked session headers with an explicit child cwd before initial and resumed background launches. Thanks [@stekman08](https://github.com/stekman08) for #1785.
-- Tolerate JSON-encoded acceptance objects from model tool calls by normalizing them before validation, while preserving clear failures for malformed strings. Thanks [@mapleluvr](https://github.com/mapleluvr) for #1781.
-- Separate steer and follow-up receipt statuses from their redacted message previews (#1773).
-- Establish async lifecycle sidecars before external CLI workers can mutate a worktree, so a disappeared runner is reconciled to a failed run. Thanks [@fkhawajagh](https://github.com/fkhawajagh) for #1764.
-- Preserve explicit read-only intent when escaped line separators surround no-edit wording, so workflow delegates do not trigger the completion mutation guard. Thanks [@fkhawajagh](https://github.com/fkhawajagh) for #1765.
-- Launch child Pi processes through the resolved CLI JavaScript on Windows hosts and run JavaScript `PI_SUBAGENT_PI_BINARY` overrides with Node. Thanks [@caohuipeng](https://github.com/caohuipeng) for #1768.
-- Resolve the installed Pi CLI for Windows wrapper hosts from the forwarded package root, and report a clear error when no verified CLI can be found. Thanks [@lux032](https://github.com/lux032) for #1780.
+- Keep async forked runs in the requested child `cwd` when they start or resume. Thanks [@stekman08](https://github.com/stekman08) for #1785.
+- Accept JSON-encoded acceptance objects from model tool calls, while still failing clearly for malformed strings. Thanks [@mapleluvr](https://github.com/mapleluvr) for #1781.
+- Keep steer and follow-up receipt statuses separate from their redacted message previews (#1773).
+- Create async lifecycle sidecars before external CLI workers begin worktree changes, so disappeared runners are reported as failed runs. Thanks [@fkhawajagh](https://github.com/fkhawajagh) for #1764.
+- Preserve explicit read-only intent when escaped line separators surround no-edit wording. Thanks [@fkhawajagh](https://github.com/fkhawajagh) for #1765.
+- Launch child Pi processes through the resolved CLI JavaScript on Windows, and run JavaScript `PI_SUBAGENT_PI_BINARY` overrides with Node. Thanks [@caohuipeng](https://github.com/caohuipeng) for #1768.
+- Resolve the installed Pi CLI on Windows wrapper hosts from the forwarded package root, and report a clear error when no verified CLI can be found. Thanks [@lux032](https://github.com/lux032) for #1780.
 
 ## [0.61.0] - 2026-08-31
 
