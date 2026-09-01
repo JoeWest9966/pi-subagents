@@ -3,24 +3,33 @@
 
 ## [Unreleased]
 
+## [0.63.0] - 2026-09-01
+
+### Highlights
+- Workflow progress is easier to scan in status, Fleet, and live widgets.
+- Additional agent folders can now be configured without copying definitions into one directory.
+- Worktrunk users get managed worktrees automatically, with native Git available as the fallback.
+- Fleet can jump straight into the selected child run's Herdr inspector.
+- Async runs clean up and report edge cases more reliably.
+
 ### Added
-- Show workflow lanes as stacked checklist progress across subagent status, Fleet, and live widget surfaces (#1806).
-- Add settings-driven extra agent scan directories with one-segment wildcard expansion. Thanks to [@mystery4f](https://github.com/mystery4f) for #1801.
-- Make Worktrunk a first-class managed worktree provider with automatic selection when available and native Git fallback when not (#1800).
-- Let Fleet open selected async children in their child-specific Herdr inspector with plain-input guidance. Thanks to [@stekman08](https://github.com/stekman08) for #1790.
+- Show workflow progress as stacked checklist summaries in status, Fleet, and live widget views (#1806).
+- Add configurable extra agent scan directories with one-segment wildcard expansion. Thanks to [@mystery4f](https://github.com/mystery4f) for #1801.
+- Make Worktrunk a first-class managed worktree provider, selected automatically when available with native Git as the fallback (#1800).
+- Let Fleet open the selected async child in its child-specific Herdr inspector. Thanks to [@stekman08](https://github.com/stekman08) for #1790.
 
 ### Changed
-- Make workflow checklist phases the primary collapsed progress view while retaining child detail when expanded (#1810).
+- Show workflow checklist phases first in collapsed views, while keeping child details available when expanded (#1810).
 
 ### Fixed
-- Isolate test agent-directory writes from inherited `PI_CODING_AGENT_DIR` during isolated runs. Thanks to [@mapleluvr](https://github.com/mapleluvr) for #1809.
-- Clear parent required-tool diagnostics when launching nested zero-tool children so a grandchild cannot overwrite and fail its parent's otherwise valid result. Thanks to [@robertvangor](https://github.com/robertvangor) for #1802.
-- Release active async capacity after terminal workflow settlement even when persisted step status remains stale. Thanks to [@boggylp](https://github.com/boggylp) for #1804.
+- Keep isolated test runs from writing agent definitions into an inherited `PI_CODING_AGENT_DIR`. Thanks to [@mapleluvr](https://github.com/mapleluvr) for #1809.
+- Prevent nested tool-availability diagnostics from failing an otherwise valid parent result. Thanks to [@robertvangor](https://github.com/robertvangor) for #1802.
+- Free async capacity correctly after workflows finish, even when saved step status is stale. Thanks to [@boggylp](https://github.com/boggylp) for #1804.
 - Make `subagents.agentOverrides.<name>` replace matching custom-agent frontmatter fields, consistently with builtin agents. Thanks to [@expoli](https://github.com/expoli) for #1796.
-- Strip the trailing Pi turn-timing footer from child output. Thanks [@fkhawajagh](https://github.com/fkhawajagh) for #1792.
-- Avoid injecting inferred acceptance reports into reviewer/read-only child prompts. Thanks [@expoli](https://github.com/expoli) for #1797.
-- Preserve coordinated read-only intent when resuming direct async children and surface captured structured output in completion and status evidence. Thanks [@fkhawajagh](https://github.com/fkhawajagh) for #1788.
-- Keep macOS subagent tasks out of argv by delivering them through temporary files. Thanks [@josephkallas](https://github.com/josephkallas) for #1793.
+- Strip the trailing Pi turn-timing footer from child output. Thanks to [@fkhawajagh](https://github.com/fkhawajagh) for #1792.
+- Keep inferred acceptance reports out of reviewer and read-only child prompts. Thanks to [@expoli](https://github.com/expoli) for #1797.
+- Preserve coordinated read-only intent when direct async children resume, and show captured structured output in completion and status evidence. Thanks to [@fkhawajagh](https://github.com/fkhawajagh) for #1788.
+- Keep macOS subagent tasks out of argv by delivering them through temporary files. Thanks to [@josephkallas](https://github.com/josephkallas) for #1793.
 
 ## [0.62.0] - 2026-08-31
 
