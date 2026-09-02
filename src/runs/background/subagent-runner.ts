@@ -156,6 +156,7 @@ import { decodeSubagentCapabilityCeiling, SUBAGENT_CAPABILITY_CEILING_ENV, type 
 import {
 	CHILD_WATCHDOG_CONFIG_ENV,
 	acceptChildWatchdogEvent,
+	applyChildWatchdogMessage,
 	childWatchdogIsActive,
 	decodeChildWatchdogConfig,
 	isChildWatchdogStatusEvent,
@@ -853,6 +854,10 @@ function runPiStreaming(
 				const text = extractTextFromContent(event.message.content);
 				if (text) writeOutputText(text);
 
+				if (childWatchdogConfig && event.type === "message_end") {
+					const next = applyChildWatchdogMessage(childWatchdogState, event.message);
+					if (next) updateChildWatchdogState(next);
+				}
 				if (event.type !== "message_end" || event.message.role !== "assistant") return;
 				const hasToolCall = assistantStartsToolCall(event.message);
 				if (event.message.model) {
@@ -1069,7 +1074,6 @@ function runPiStreaming(
 					phase: "stale",
 					seq: (childWatchdogState?.seq ?? 0) + 1,
 					lastUpdate: Date.now(),
-					followUpPending: false,
 					reason: "child watchdog tail timeout",
 					timedOut: true,
 				});
@@ -2167,6 +2171,7 @@ async function runSingleStepInner(
 			reportOptional: isAgentContractV1(step.agentContract),
 			artifactsDir: ctx.artifactsDir,
 			runId: ctx.id,
+			watchdog: finalResult?.watchdog,
 		}))
 		: undefined;
 	const stoppedAfterAcceptance = finalResult?.stopped === true || ctx.stopSignal?.aborted === true;
@@ -3583,6 +3588,15 @@ async function runSubagent(
 			statusPayload.lastUpdate = now;
 			writeStatusPayload(false);
 			return;
+		}
+		if (event.type === "message_end") {
+			const next = applyChildWatchdogMessage(step.watchdog, event.message, now);
+			if (next) step.watchdog = next;
+			if (next && (event.message as { role?: unknown } | undefined)?.role === "custom") {
+				statusPayload.lastUpdate = now;
+				writeStatusPayload(false);
+				return;
+			}
 		}
 		if (event.type === "tool_execution_start" && event.toolName) {
 			const mutates = isMutatingTool(event.toolName, event.args, flatSteps[flatIndex]?.mutationTools);

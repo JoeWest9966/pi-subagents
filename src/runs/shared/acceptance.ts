@@ -21,7 +21,9 @@ import type {
 	ResolvedAcceptanceGate,
 	SingleResult,
 	SubagentRunMode,
+	ChildWatchdogProgress,
 } from "../../shared/types.ts";
+import { unresolvedChildWatchdogBlockers } from "../../watchdog/child-status.ts";
 import { isAgentContractV1 } from "./agent-contract.ts";
 import { classifyTaskMutationIntent, stripSeverityCompounds, taskMayMutate } from "./task-intent.ts";
 
@@ -1360,6 +1362,7 @@ export async function evaluateAcceptance(input: {
 	reportOptional?: boolean;
 	artifactsDir?: string;
 	runId?: string;
+	watchdog?: ChildWatchdogProgress;
 }): Promise<AcceptanceLedger> {
 	const acceptance = input.acceptance;
 	const initialStatus = acceptance.level === "none" ? "not-required" : "claimed";
@@ -1374,6 +1377,13 @@ export async function evaluateAcceptance(input: {
 		verifyRuns: [],
 	};
 	if (acceptance.level === "none") return ledger;
+
+	if (input.watchdog) {
+		const unresolved = unresolvedChildWatchdogBlockers(input.watchdog);
+		ledger.runtimeChecks.push(unresolved.length
+			? { id: "watchdog-blocker", status: "failed", message: `Unresolved watchdog blocker: ${unresolved[0]!.summary}` }
+			: { id: "watchdog-blocker", status: "passed", message: "No unresolved watchdog blockers." });
+	}
 
 	const parsed: AcceptanceReportParseResult = input.reportError
 		? { error: input.reportError }

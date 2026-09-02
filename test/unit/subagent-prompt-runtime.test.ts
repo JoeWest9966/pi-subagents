@@ -185,9 +185,8 @@ describe("subagent prompt runtime", () => {
 				agentEndTimeoutMs: 5,
 				maxWarnings: null,
 				lsp: { enabled: false, timeoutMs: 100, maxFiles: 1, maxDiagnostics: 1 },
-				autoFollowBlockers: false,
-				autoFollowMaxAttempts: null,
 				stalemateRepeats: 2,
+				cadence: { everyNTools: null },
 			});
 			const handlers: Array<(event: { toolName?: string; input?: unknown }, ctx: { signal?: AbortSignal }) => unknown> = [];
 			registerPermissionGate({ on(event: string, handler: (event: { toolName?: string; input?: unknown }, ctx: { signal?: AbortSignal }) => unknown) { if (event === "tool_call") handlers.push(handler); } } as never, async () => new Promise(() => undefined));
@@ -699,9 +698,8 @@ describe("subagent prompt runtime", () => {
 			agentEndTimeoutMs: 500,
 			maxWarnings: null,
 			lsp: { enabled: false, timeoutMs: 3000, maxFiles: 20, maxDiagnostics: 50 },
-			autoFollowBlockers: false,
-			autoFollowMaxAttempts: 3,
 			stalemateRepeats: 2,
+			cadence: { everyNTools: null },
 		});
 		const handlersWith = new Map<string, unknown[]>();
 		registerSubagentPromptRuntime({

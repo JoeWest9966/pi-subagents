@@ -763,3 +763,54 @@ describe("scheduled completions", () => {
 		assert.equal(parsed?.resultPreview, "Workflow completed with 1 child run(s).");
 	});
 });
+
+describe("watchdog blockers in completion notices", () => {
+	it("collects child blockers into details and round-trips them through the notice text", () => {
+		const details = buildCompletionDetails({
+			id: "run-1",
+			agent: "workflow",
+			mode: "workflow",
+			runId: "run-1",
+			success: false,
+			summary: "worker:\nPatched billing.",
+			exitCode: 1,
+			results: [
+				{
+					runId: "child-1",
+					agent: "worker",
+					success: false,
+					watchdog: {
+						phase: "idle",
+						seq: 3,
+						lastUpdate: 1,
+						warnings: [
+							{ severity: "blocker", category: "test-gap", summary: "Claims tests passed without running them", evidence: "e", recommendedAction: "r", addressed: false, stalemate: false },
+							{ severity: "concern", category: "other", summary: "Concern is not listed", evidence: "e", recommendedAction: "r", addressed: true, stalemate: false },
+							{ severity: "blocker", category: "scope-drift", summary: "Kept editing after being told to stop", evidence: "e", recommendedAction: "r", addressed: false, stalemate: true },
+						],
+					},
+				},
+				{ runId: "child-2", agent: "reviewer", success: true, output: "clean" },
+			],
+			sessionId: "session-1",
+		});
+
+		assert.deepEqual(details.watchdogBlockers, [
+			{ agent: "worker", summary: "Claims tests passed without running them", addressed: false, stalemate: false },
+			{ agent: "worker", summary: "Kept editing after being told to stop", addressed: false, stalemate: true },
+		]);
+
+		const content = formatSingleCompletion(details);
+		assert.match(content, /\nWatchdog blockers:\n- worker: Claims tests passed without running them \(unaddressed\)\n- worker: Kept editing after being told to stop \(stalemate\)\n/);
+		const parsed = parseSubagentNotifyContent(content);
+		assert.deepEqual(parsed?.watchdogBlockers, details.watchdogBlockers);
+		assert.match(parsed?.resultPreview ?? "", /^worker:\nPatched billing\./);
+		assert.doesNotMatch(parsed?.resultPreview ?? "", /Watchdog blockers/);
+		assert.equal(parsed?.workflowRunId, "run-1");
+
+		const grouped = formatGroupedCompletion([details, { agent: "scout", status: "completed", resultPreview: "ok" }]);
+		assert.match(grouped, /Watchdog blockers:\n- worker: Claims tests passed without running them \(unaddressed\)/);
+		assert.equal(grouped.split("Watchdog blockers:").length, 2);
+
+	});
+});

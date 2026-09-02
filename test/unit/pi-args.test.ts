@@ -459,7 +459,6 @@ describe("buildPiArgs session wiring", () => {
 			inheritProjectContext: false,
 			inheritSkills: false,
 			childWatchdog: {
-				enabled: true,
 				runId: "run-1",
 				agent: "worker",
 				childIndex: 2,
@@ -467,15 +466,13 @@ describe("buildPiArgs session wiring", () => {
 				agentEndTimeoutMs: 500,
 				maxWarnings: 1,
 				lsp: { enabled: false, timeoutMs: 50, maxFiles: 2, maxDiagnostics: 3 },
-				autoFollowBlockers: true,
-				autoFollowMaxAttempts: 3,
 				stalemateRepeats: 2,
+				cadence: { everyNTools: null },
 			},
 		});
 		const encoded = withWatchdog.env[CHILD_WATCHDOG_CONFIG_ENV];
 		assert.equal(typeof encoded, "string");
 		assert.deepEqual(JSON.parse(encoded ?? "{}"), {
-			enabled: true,
 			runId: "run-1",
 			agent: "worker",
 			childIndex: 2,
@@ -483,9 +480,8 @@ describe("buildPiArgs session wiring", () => {
 			agentEndTimeoutMs: 500,
 			maxWarnings: 1,
 			lsp: { enabled: false, timeoutMs: 50, maxFiles: 2, maxDiagnostics: 3 },
-			autoFollowBlockers: true,
-			autoFollowMaxAttempts: 3,
 			stalemateRepeats: 2,
+			cadence: { everyNTools: null },
 		});
 	});
 });

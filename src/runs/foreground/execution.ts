@@ -115,6 +115,7 @@ import { consumeWorkflowChildPermit } from "../../shared/workflow-child-permit.t
 import { createBoundedByteTail, createBoundedLineReader, formatProtocolOutputLimit, MAX_CHILD_STDERR_BYTES, PI_AGGREGATE_EVENT_PROJECTOR, projectChildLifecycle, type ChildLifecycleAction, type ChildLifecycleState, type ProtocolOutputLimit } from "../shared/child-protocol.ts";
 import {
 	acceptChildWatchdogEvent,
+	applyChildWatchdogMessage,
 	childWatchdogIsActive,
 	isChildWatchdogStatusEvent,
 	resolveChildWatchdogConfig,
@@ -779,7 +780,6 @@ async function runSingleAttempt(
 					phase: "stale",
 					seq: (childWatchdogState?.seq ?? 0) + 1,
 					lastUpdate: Date.now(),
-					followUpPending: false,
 					reason: "child watchdog tail timeout",
 					timedOut: true,
 				});
@@ -1119,6 +1119,10 @@ async function runSingleAttempt(
 
 			if (evt.type === "message_end" && evt.message) {
 				result.messages!.push(evt.message);
+				if (childWatchdog) {
+					const next = applyChildWatchdogMessage(childWatchdogState, evt.message);
+					if (next) updateChildWatchdogState(next);
+				}
 				if (evt.message.role === "assistant") {
 					result.usage.turns++;
 					progress.turnCount = result.usage.turns;
@@ -2231,6 +2235,7 @@ async function runSyncCompletionInner(
 				reportOptional: isAgentContractV1(options.agentContract),
 				artifactsDir: options.artifactsDir,
 				runId: options.runId,
+				watchdog: result.watchdog,
 			});
 		}
 	} catch (error) {

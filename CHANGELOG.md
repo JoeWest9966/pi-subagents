@@ -1,7 +1,17 @@
 # Changelog
 
-
 ## [Unreleased]
+
+### Added
+- Add watchdog launch rules under `subagents.watchdog.rules`: per-role model allow/deny globs that warn or block before a child starts.
+- Give watchdog reviewers a read-only `watchdog_diff` tool for the session-start diff, untracked paths, path narrowing, and stat mode.
+- Run child watchdog cadence reviews through `children.cadence` and `children.overrides.<agent>.cadence`, and keep both the head and tail of over-long review input.
+- Lift child watchdog warnings into parent results, acceptance (`watchdog-blocker`), completion notices, and Fleet `wd:<n>` chips.
+- Load standing watchdog reviewer instructions from project and agent `WATCHDOG.md` files on every review.
+
+### Changed
+- Reject no-op watchdog settings: `delivery`, `showDuringRun`, `syncBacklog`, `lateWarningPolicy`, `compactAtPercent`, `reviewRetryDelayMs`, `maxReviewFailures`, `asyncCompletion`, and `guidance.systemPromptPath`.
+- Remove watchdog auto-follow. Pi 0.84+ already continues after displayed boundary warnings; repeated identical warnings stop after `subagents.watchdog.stalemateRepeats`. The `autoFollow` settings block is now unknown.
 
 ## [0.63.0] - 2026-09-01
 
