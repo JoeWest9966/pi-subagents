@@ -30,6 +30,10 @@ import { registerPromptWorkflowCommands } from "./prompt-workflows.ts";
 import { openSubagentsAdmin } from "./subagents-admin.ts";
 import { SUBAGENT_GUIDE_TOPICS } from "../extension/subagent-guide.ts";
 import { openSubagentFleet } from "../tui/fleet.ts";
+import { openFleetInHerdrPane, type FleetPaneHandle } from "../tui/fleet-pane.ts"; // fleet-pane
+import { openSubagentsMenuPane, type MenuPaneHandle } from "../tui/subagents-menu.ts"; // fleet-pane
+import { loadConfig } from "../extension/config.ts"; // fleet-pane
+import { collectFleetSnapshot } from "../tui/fleet.ts"; // fleet-pane
 import {
 	applySlashUpdate,
 	buildSlashInitialResult,
@@ -715,6 +719,8 @@ export function registerSlashCommands(
 	options: { fleetKeybindings?: FleetKeybindingsConfig; foregroundDetachShortcut?: string } = {},
 ): { dispose: () => void } {
 	let fleetOpen = false;
+	let fleetPane: FleetPaneHandle | undefined; // fleet-pane
+	let menuPane: MenuPaneHandle | undefined; // fleet-pane
 	let disposed = false;
 	const pendingRequests = new Set<AbortController>();
 	const runCommand = (ctx: ExtensionContext, params: SubagentParamsLike): Promise<void> => {
@@ -789,6 +795,104 @@ export function registerSlashCommands(
 		},
 	});
 
+	// --- fleet-pane: /s-w 快捷派发，等价 /run [@agent|worker] <task> --bg ---
+	pi.registerCommand("s-w", {
+		description: "Quick dispatch: /s-w [@agent] <task> = /run [@agent|worker] <task> --bg",
+		getArgumentCompletions: (prefix) => {
+			if (!prefix.startsWith("@") || prefix.includes(" ")) return null;
+			try {
+				const items = makeAgentCompletions(pi, state)(prefix.slice(1));
+				return items ? items.map((item) => ({ value: "@" + item.value, label: "@" + item.label })) : null;
+			} catch {
+				return null;
+			}
+		},
+		handler: async (args, ctx) => {
+			let input = args.trim();
+			if (!input) {
+				ctx.ui.notify("Usage: /s-w [@agent] <task>", "error");
+				return;
+			}
+			let agentName = "worker";
+			if (input.startsWith("@")) {
+				const firstSpace = input.indexOf(" ");
+				if (firstSpace === -1) {
+					ctx.ui.notify("Usage: /s-w [@agent] <task> — @agent 后面必须跟任务", "error");
+					return;
+				}
+				agentName = input.slice(1, firstSpace);
+				input = input.slice(firstSpace + 1).trim();
+			}
+			if (!input) {
+				ctx.ui.notify("Usage: /s-w [@agent] <task>", "error");
+				return;
+			}
+			if (!state.baseCwd) {
+				ctx.ui.notify("Subagent session cwd is not initialized yet", "error");
+				return;
+			}
+			const discovered = discoverSlashAgents(pi, state.baseCwd, "both");
+			const resolvedAgent = resolveAgentName(agentName, discovered.agents);
+			const candidates = resolvedAgent.error
+				? discovered.agents.filter((agent) => resolveAgentName(agentName, [agent]).agent)
+				: resolvedAgent.agent;
+			const diagnostic = findBlockingAgentDiagnostic(agentName, candidates, discovered.agentDiagnostics);
+			if (diagnostic || resolvedAgent.error || !resolvedAgent.agent) {
+				ctx.ui.notify(diagnostic ? `Agent '${agentName}' has invalid configuration: ${diagnostic.error}` : resolvedAgent.error ?? formatUnknownAgentError(agentName, discovered.unknownAgentDiagnosticContext), "error");
+				return;
+			}
+			const child: Record<string, unknown> = { agent: agentName, task: input, agentScope: "both" };
+			launchCommand(ctx, { workflowScript: slashRunWorkflowScript("s-w", child), async: true });
+		},
+	}); // fleet-pane end
+
+	// --- fleet-pane: /s-l 紧凑舰队列表 ---
+	pi.registerCommand("s-l", {
+		description: "Compact fleet list in one line per run",
+		handler: async (_args, ctx) => {
+			const snapshot = collectFleetSnapshot(state, { asyncDirRoot: DIRS.async, resultsDir: DIRS.results });
+			if (snapshot.items.length === 0) {
+				sendSlashText(pi, "舰队空闲，没有在册的 worker。用 /s-w <task> 派一个。");
+				return;
+			}
+			const icons: Record<string, string> = { running: "●", queued: "○", paused: "⏸", complete: "✓", failed: "✗", stopped: "✗", timedOut: "✗", rejected: "✗" };
+			const lines = snapshot.items.map((item) => {
+				const icon = icons[item.state] ?? "·";
+				const id = item.runId.slice(0, 8);
+				const desc = (item as { description?: string }).description ?? "";
+				return `${icon} ${item.state.padEnd(8)} ${id}  ${item.agent}${desc ? `  ${desc}` : ""}`;
+			});
+			sendSlashText(pi, lines.join("\n"));
+		},
+	}); // fleet-pane end
+
+	// --- fleet-pane: /s 给 worker 发消息（等价 /subagents-steer，id 支持前缀）---
+	pi.registerCommand("s", {
+		description: "Send a message to a live async run: /s <run-id-prefix> <message>",
+		handler: async (args, ctx) => {
+			const tokens = args.trim().split(/\s+/).filter(Boolean);
+			const [id, ...rest] = tokens;
+			if (!id || rest.length === 0) {
+				sendSlashText(pi, "Usage: /s <run-id-prefix> <message>");
+				return;
+			}
+			await runCommand(ctx, { action: "steer", id, message: rest.join(" ").trim(), steeringRecovery: false });
+		},
+	}); // fleet-pane end
+
+	// --- fleet-pane: /s-k 停掉一个 worker（等价 /subagents-stop，id 支持前缀）---
+	pi.registerCommand("s-k", {
+		description: "Stop a live async run: /s-k <run-id-prefix>",
+		handler: async (args, ctx) => {
+			const tokens = args.trim().split(/\s+/).filter(Boolean);
+			if (tokens.length !== 1) {
+				sendSlashText(pi, "Usage: /s-k <run-id-prefix>");
+				return;
+			}
+			await runCommand(ctx, { action: "stop", id: tokens[0] });
+		},
+	}); // fleet-pane end
+
 	pi.registerCommand("subagent-cost", {
 		description: "Show parent and subagent child usage cost for this session",
 		handler: async (_args, ctx) => {
@@ -852,6 +956,58 @@ export function registerSlashCommands(
 		description: "Open the live subagent fleet inspector",
 		handler: async (_args, ctx) => showFleet(ctx),
 	});
+
+	// --- fleet-pane: Fleet Inspector 投射到 Herdr pane ---
+	pi.registerCommand("subagents-fleet-pane", {
+		description: "Open the live subagent fleet inspector in a Herdr pane",
+		handler: async (args, ctx) => {
+			if (fleetPane) {
+				const existing = fleetPane;
+				fleetPane = undefined;
+				await existing.close();
+				ctx.ui.notify(`Closed fleet pane ${existing.paneId}.`, "info");
+				return;
+			}
+			state.lastUiContext = ctx;
+			const opened = await openFleetInHerdrPane(ctx, state, {
+				asyncDirRoot: DIRS.async,
+				resultsDir: DIRS.results,
+				fleetKeybindings: options.fleetKeybindings,
+				focus: /\bfocus\b/.test(args),
+			});
+			if (!opened.ok) {
+				ctx.ui.notify(opened.message, "error");
+				return;
+			}
+			fleetPane = opened.handle;
+			ctx.ui.notify(`Fleet inspector attached to pane ${opened.handle.paneId}. Run /subagents-fleet-pane again to close.`, "info");
+		},
+	}); // fleet-pane end
+
+	// --- fleet-pane: subagents-menu 配置开关面板 ---
+	pi.registerCommand("subagents-menu", {
+		description: "Toggle subagents config switches in a Herdr pane below the fleet pane",
+		handler: async (_args, ctx) => {
+			if (menuPane) {
+				const existing = menuPane;
+				menuPane = undefined;
+				await existing.close();
+				ctx.ui.notify("Closed subagents menu.", "info");
+				return;
+			}
+			state.lastUiContext = ctx;
+			const opened = await openSubagentsMenuPane({
+				anchorPaneId: fleetPane?.paneId,
+				loadConfig: () => loadConfig(),
+			});
+			if (!opened.ok) {
+				ctx.ui.notify(opened.message, "error");
+				return;
+			}
+			menuPane = opened.handle;
+			ctx.ui.notify(`Menu attached to pane ${opened.handle.paneId}. Run /subagents-menu again to close.`, "info");
+		},
+	}); // fleet-pane end
 
 	pi.registerShortcut(FLEET_OPEN_SHORTCUT, {
 		description: "Open subagent fleet inspector",

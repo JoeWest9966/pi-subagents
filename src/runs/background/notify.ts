@@ -249,7 +249,34 @@ function formatCorrelationLines(details: SubagentNotifyDetails): string[] {
 	].filter((line): line is string => line !== undefined);
 }
 
+// --- fleet-pane: workflow「发射完成」≠ worker 完成，改写文案防止主 agent 误判空跑而双跑 ---
+const isLaunchOnlyWorkflowNotice = (details: SubagentNotifyDetails): boolean =>
+	details.agent === "workflow" &&
+	details.status === "completed" &&
+	typeof details.resultPreview === "string" &&
+	details.resultPreview.includes("detached and running in the background");
+
+const formatLaunchOnlyWorkflowNotice = (details: SubagentNotifyDetails): string => {
+	const ids = (details.childRuns ?? []).map((child) => child.runId).filter((id) => typeof id === "string" && id.length > 0);
+	const idText = ids.length > 0 ? ids.join(", ") : "(run id 见 /s-l)";
+	const sessionLine = formatSessionLine(details);
+	return [
+		`Background task completed: **workflow**${details.taskInfo ?? ""}`,
+		"",
+		`DISPATCH ONLY: worker 已派出并仍在后台运行中: ${idText}`,
+		"这条通知只代表「派发动作」完成，不是 worker 的结果。",
+		"禁止据此判断 worker 空跑或没干活；禁止自己重做同一件事（双跑会烧双倍 token 并可能互相踩文件）。",
+		'查进度用 /s-l 或 subagent({ action: "status", id })。worker 真正完成时会另发一条 **worker** 通知。',
+		sessionLine ? "" : undefined,
+		sessionLine,
+	]
+		.filter((line) => line !== undefined)
+		.join("\n");
+};
+// fleet-pane end
+
 export function formatSingleCompletion(details: SubagentNotifyDetails): string {
+	if (isLaunchOnlyWorkflowNotice(details)) return formatLaunchOnlyWorkflowNotice(details); // fleet-pane
 	const sessionLine = formatSessionLine(details);
 	const correlationLines = formatCorrelationLines(details);
 	const taskKind = details.source === "foreground" ? "Detached foreground task" : "Background task";
