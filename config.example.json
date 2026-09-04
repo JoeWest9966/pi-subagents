@@ -1,0 +1,7 @@
+{
+  "forceTopLevelAsync": true,
+  "fleetView": true,
+  "waitTool": {
+    "enabled": false
+  }
+}

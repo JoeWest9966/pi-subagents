@@ -52,6 +52,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
+    "postinstall": "node scripts/ensure-config.mjs",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit",
     "test:unit": "node --experimental-strip-types --import ./test/support/isolated-temp-root.mjs --test test/unit/*.test.ts",
